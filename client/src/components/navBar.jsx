@@ -5,7 +5,7 @@ export default function Navbar() {
       <div className="ml-[160px]">
           <h1 className="text-5xl font-semibold tracking-wide text-[#f0d9a6]">
             Game Analysis ♟️
-          </h1>
+          </h1> 
         </div>
 
     </nav>
