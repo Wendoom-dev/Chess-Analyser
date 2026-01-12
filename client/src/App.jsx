@@ -3,7 +3,7 @@ import Navbar from "./components/navBar.jsx";
 import MoveAnalysisBar from "./components/moveAnalysisBar.jsx";
 import Board from "./components/board.jsx";
 
-import { parse } from "pgn-parser";         // ✔ proper parser
+import { parse } from "pgn-parser";         
 import { Chess } from "chess.js";
 
 // Your original PGN string
@@ -30,48 +30,50 @@ const PGN = `
 export default function App() {
   const [fenPositions, setFenPositions] = useState([]);
   const [moves, setMoves] = useState([]);
+  const [moveIndex, setMoveIndex] = useState(0);
 
+  // Parse PGN and generate FENs
   useEffect(() => {
     try {
-      // 1️⃣ Parse PGN into JSON structure
       const [parsed] = parse(PGN, { startRule: "game" });
-      console.log("Parsed PGN object:", parsed);
-
-      // 2️⃣ Extract only SAN move strings
-      // `parsed.moves` contains objects with .move property
       const sanMoves = parsed.moves.map((m) => m.move);
-      console.log("SAN moves:", sanMoves);
-
       setMoves(sanMoves);
 
-      // 3️⃣ Feed into chess.js to generate FENs
-      const chess = new Chess();
       const temp = new Chess();
       const fens = [temp.fen()];
-
       sanMoves.forEach((san) => {
         temp.move(san);
         fens.push(temp.fen());
       });
-
       setFenPositions(fens);
-
-      console.log("FEN positions:", fens);
     } catch (err) {
       console.error("Failed to parse PGN with pgn-parser:", err);
     }
   }, []);
+
+  // Autoplay every 1.2 seconds
+  useEffect(() => {
+    if (fenPositions.length === 0) return;
+
+    const interval = setInterval(() => {
+      setMoveIndex((prev) => {
+        if (prev + 1 < fenPositions.length) return prev + 1;
+        clearInterval(interval);
+        return prev;
+      });
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [fenPositions]);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#1e1b18] text-[#e6c07b] font-['Space_Grotesk'] flex flex-col">
       <Navbar />
 
       <div className="flex flex-1 h-[calc(100vh-6rem)] overflow-hidden">
-        {/* Just show starting position for now */}
-        <Board moveIndex={0} fenPositions={fenPositions} />
-
+        <Board moveIndex={moveIndex} fenPositions={fenPositions} />
         <div className="flex-shrink-0 w-[350px] sm:w-[400px]">
-          <MoveAnalysisBar moveIndex={0} moves={moves} />
+          <MoveAnalysisBar moveIndex={moveIndex} moves={moves} />
         </div>
       </div>
     </div>
