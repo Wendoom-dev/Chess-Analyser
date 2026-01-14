@@ -6,7 +6,6 @@ import Board from "./components/board.jsx";
 import { parse } from "pgn-parser";         
 import { Chess } from "chess.js";
 
-// Your original PGN string
 const PGN = `
 [Event "Live Chess"]
 [Site "Chess.com"]
@@ -31,8 +30,9 @@ export default function App() {
   const [fenPositions, setFenPositions] = useState([]);
   const [moves, setMoves] = useState([]);
   const [moveIndex, setMoveIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  // Parse PGN and generate FENs
+  // Parse PGN and generate FENs - ONLY ONCE
   useEffect(() => {
     try {
       const [parsed] = parse(PGN, { startRule: "game" });
@@ -46,32 +46,74 @@ export default function App() {
         fens.push(temp.fen());
       });
       setFenPositions(fens);
+      
+      console.log("Parsed moves:", sanMoves);
+      console.log("Generated FENs:", fens);
     } catch (err) {
-      console.error("Failed to parse PGN with pgn-parser:", err);
+      console.error("Failed to parse PGN:", err);
     }
-  }, []);
+  }, []); // Empty dependency array - runs once
 
-  // Autoplay every 1.2 seconds
+  // Autoplay - SEPARATE effect
   useEffect(() => {
-    if (fenPositions.length === 0) return;
+    if (!isPlaying || fenPositions.length === 0) return;
 
     const interval = setInterval(() => {
       setMoveIndex((prev) => {
-        if (prev + 1 < fenPositions.length) return prev + 1;
-        clearInterval(interval);
+        const nextIndex = prev + 1;
+        if (nextIndex < fenPositions.length) {
+          console.log("Auto-advancing to move", nextIndex);
+          return nextIndex;
+        }
+        setIsPlaying(false);
         return prev;
       });
     }, 1200);
 
     return () => clearInterval(interval);
-  }, [fenPositions]);
+  }, [isPlaying, fenPositions.length]);
+
+  const handlePrevious = () => {
+    setMoveIndex(prev => {
+      const newIndex = Math.max(0, prev - 1);
+      console.log("Previous clicked, new index:", newIndex);
+      return newIndex;
+    });
+  };
+
+  const handleNext = () => {
+    setMoveIndex(prev => {
+      const newIndex = Math.min(fenPositions.length - 1, prev + 1);
+      console.log("Next clicked, new index:", newIndex);
+      return newIndex;
+    });
+  };
+
+  const handlePlayPause = () => {
+    setIsPlaying(prev => !prev);
+    console.log("Play/Pause toggled");
+  };
+
+  const handleReset = () => {
+    setMoveIndex(0);
+    setIsPlaying(false);
+    console.log("Reset to starting position");
+  };
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#1e1b18] text-[#e6c07b] font-['Space_Grotesk'] flex flex-col">
       <Navbar />
 
       <div className="flex flex-1 h-[calc(100vh-6rem)] overflow-hidden">
-        <Board moveIndex={moveIndex} fenPositions={fenPositions} />
+        <Board 
+          moveIndex={moveIndex} 
+          fenPositions={fenPositions}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onPlayPause={handlePlayPause}
+          onReset={handleReset}
+          isPlaying={isPlaying}
+        />
         <div className="flex-shrink-0 w-[350px] sm:w-[400px]">
           <MoveAnalysisBar moveIndex={moveIndex} moves={moves} />
         </div>
