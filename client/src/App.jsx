@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import Navbar from "./components/navBar.jsx";
 import MoveAnalysisBar from "./components/moveAnalysisBar.jsx";
 import Board from "./components/board.jsx";
+import 'chessground/assets/chessground.base.css';
+import 'chessground/assets/chessground.brown.css';
+import 'chessground/assets/chessground.cburnett.css';
 
 import { parse } from "pgn-parser";         
 import { Chess } from "chess.js";

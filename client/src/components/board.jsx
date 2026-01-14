@@ -1,11 +1,52 @@
-import { Chessboard } from "react-chessboard";
+import { useEffect, useRef } from "react";
+import { Chessground } from "chessground";
 
 export default function Board({ moveIndex, fenPositions, onPrevious, onNext, onPlayPause, onReset, isPlaying }) {
-  console.log("Board render - moveIndex:", moveIndex);
-  console.log("Board render - Current FEN:", fenPositions[moveIndex]);
+  const boardRef = useRef(null);
+  const chessgroundRef = useRef(null);
 
-  // Get the current position
-  const currentPosition = fenPositions[moveIndex];
+  // Initialize Chessground once on mount
+  useEffect(() => {
+    if (!boardRef.current) return;
+
+    const config = {
+      fen: fenPositions[0] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      viewOnly: true, // Pieces can't be dragged
+      animation: {
+        enabled: true,
+        duration: 300
+      },
+      highlight: {
+        lastMove: true,
+        check: true
+      },
+      coordinates: true
+    };
+
+    chessgroundRef.current = Chessground(boardRef.current, config);
+
+    console.log("Chessground initialized");
+
+    // Cleanup on unmount
+    return () => {
+      if (chessgroundRef.current) {
+        chessgroundRef.current.destroy();
+      }
+    };
+  }, [fenPositions]);
+
+  // Update position when moveIndex changes
+  useEffect(() => {
+    if (!chessgroundRef.current || !fenPositions[moveIndex]) return;
+
+    console.log("Updating board to moveIndex:", moveIndex);
+    console.log("New FEN:", fenPositions[moveIndex]);
+
+    chessgroundRef.current.set({
+      fen: fenPositions[moveIndex],
+      lastMove: null // You can add last move highlighting later
+    });
+  }, [moveIndex, fenPositions]);
 
   return (
     <div className="flex flex-col flex-1">
@@ -13,23 +54,16 @@ export default function Board({ moveIndex, fenPositions, onPrevious, onNext, onP
         {/* Vertical Eval Bar */}
         <div className="w-2 sm:w-3 h-full max-h-[760px] rounded-full bg-gradient-to-b from-white via-neutral-400 to-black" />
 
-        {/* Chessboard - KEY FIX HERE */}
-        <div className="flex-1 max-w-[760px]">
-          {currentPosition ? (
-            <Chessboard
-              key={moveIndex} // CRITICAL: Force re-render on each move
-              position={currentPosition}
-              arePiecesDraggable={false}
-              animationDuration={300}
-              boardWidth={Math.min(760, window.innerWidth * 0.6)}
-              customDarkSquareStyle={{ backgroundColor: '#b58863' }}
-              customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-[500px] text-gray-500">
-              Loading game...
-            </div>
-          )}
+        {/* Chessground Container */}
+        <div className="flex-1 max-w-[760px] flex items-center justify-center">
+          <div 
+            ref={boardRef}
+            style={{
+              width: '600px',
+              height: '600px'
+            }}
+            className="cg-wrap"
+          />
         </div>
       </div>
 
