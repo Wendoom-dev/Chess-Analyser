@@ -35,7 +35,7 @@ export default function App() {
   const [moveIndex, setMoveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Parse PGN and generate FENs - ONLY ONCE
+
   useEffect(() => {
     try {
       const [parsed] = parse(PGN, { startRule: "game" });
@@ -55,9 +55,9 @@ export default function App() {
     } catch (err) {
       console.error("Failed to parse PGN:", err);
     }
-  }, []); // Empty dependency array - runs once
+  }, []);
 
-  // Autoplay - SEPARATE effect
+
   useEffect(() => {
     if (!isPlaying || fenPositions.length === 0) return;
 

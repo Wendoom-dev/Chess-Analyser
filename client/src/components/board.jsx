@@ -5,13 +5,13 @@ export default function Board({ moveIndex, fenPositions, onPrevious, onNext, onP
   const boardRef = useRef(null);
   const chessgroundRef = useRef(null);
 
-  // Initialize Chessground once on mount
+
   useEffect(() => {
     if (!boardRef.current) return;
 
     const config = {
       fen: fenPositions[0] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      viewOnly: true, // Pieces can't be dragged
+      viewOnly: true, 
       animation: {
         enabled: true,
         duration: 300
@@ -27,7 +27,7 @@ export default function Board({ moveIndex, fenPositions, onPrevious, onNext, onP
 
     console.log("Chessground initialized");
 
-    // Cleanup on unmount
+   
     return () => {
       if (chessgroundRef.current) {
         chessgroundRef.current.destroy();
@@ -35,7 +35,7 @@ export default function Board({ moveIndex, fenPositions, onPrevious, onNext, onP
     };
   }, [fenPositions]);
 
-  // Update position when moveIndex changes
+
   useEffect(() => {
     if (!chessgroundRef.current || !fenPositions[moveIndex]) return;
 
@@ -44,7 +44,7 @@ export default function Board({ moveIndex, fenPositions, onPrevious, onNext, onP
 
     chessgroundRef.current.set({
       fen: fenPositions[moveIndex],
-      lastMove: null // You can add last move highlighting later
+      lastMove: null 
     });
   }, [moveIndex, fenPositions]);
 
