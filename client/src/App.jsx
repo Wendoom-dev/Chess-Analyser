@@ -6,9 +6,6 @@ import 'chessground/assets/chessground.base.css';
 import 'chessground/assets/chessground.brown.css';
 import 'chessground/assets/chessground.cburnett.css';
 
-import { parse } from "pgn-parser";         
-import { Chess } from "chess.js";
-
 const PGN = `
 [Event "Live Chess"]
 [Site "Chess.com"]
@@ -35,39 +32,47 @@ export default function App() {
   const [moveIndex, setMoveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
+  // Fetch parsed PGN from backend
   useEffect(() => {
-    try {
-      const [parsed] = parse(PGN, { startRule: "game" });
-      const sanMoves = parsed.moves.map((m) => m.move);
-      setMoves(sanMoves);
+    const analyzePGN = async () => {
+      setLoading(true);
+      setError(null);
 
-      const temp = new Chess();
-      const fens = [temp.fen()];
-      sanMoves.forEach((san) => {
-        temp.move(san);
-        fens.push(temp.fen());
-      });
-      setFenPositions(fens);
-      
-      console.log("Parsed moves:", sanMoves);
-      console.log("Generated FENs:", fens);
-    } catch (err) {
-      console.error("Failed to parse PGN:", err);
-    }
+      try {
+        const response = await fetch("http://localhost:5000/api/analysis/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pgn: PGN }),
+        });
+
+        if (!response.ok) throw new Error("Failed to analyze PGN");
+
+        const result = await response.json();
+        setMoves(result.data.moves);
+        setFenPositions(result.data.fenPositions);
+
+      } catch (err) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    analyzePGN();
   }, []);
 
-
+  // Auto-play moves
   useEffect(() => {
     if (!isPlaying || fenPositions.length === 0) return;
 
     const interval = setInterval(() => {
-      setMoveIndex((prev) => {
+      setMoveIndex(prev => {
         const nextIndex = prev + 1;
-        if (nextIndex < fenPositions.length) {
-          console.log("Auto-advancing to move", nextIndex);
-          return nextIndex;
-        }
+        if (nextIndex < fenPositions.length) return nextIndex;
         setIsPlaying(false);
         return prev;
       });
@@ -76,50 +81,40 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isPlaying, fenPositions.length]);
 
-  const handlePrevious = () => {
-    setMoveIndex(prev => {
-      const newIndex = Math.max(0, prev - 1);
-      console.log("Previous clicked, new index:", newIndex);
-      return newIndex;
-    });
-  };
-
-  const handleNext = () => {
-    setMoveIndex(prev => {
-      const newIndex = Math.min(fenPositions.length - 1, prev + 1);
-      console.log("Next clicked, new index:", newIndex);
-      return newIndex;
-    });
-  };
-
-  const handlePlayPause = () => {
-    setIsPlaying(prev => !prev);
-    console.log("Play/Pause toggled");
-  };
-
-  const handleReset = () => {
-    setMoveIndex(0);
-    setIsPlaying(false);
-    console.log("Reset to starting position");
-  };
+  const handlePrevious = () => setMoveIndex(prev => Math.max(0, prev - 1));
+  const handleNext = () => setMoveIndex(prev => Math.min(fenPositions.length - 1, prev + 1));
+  const handlePlayPause = () => setIsPlaying(prev => !prev);
+  const handleReset = () => { setMoveIndex(0); setIsPlaying(false); };
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#1e1b18] text-[#e6c07b] font-['Space_Grotesk'] flex flex-col">
       <Navbar />
 
       <div className="flex flex-1 h-[calc(100vh-6rem)] overflow-hidden">
-        <Board 
-          moveIndex={moveIndex} 
-          fenPositions={fenPositions}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          onPlayPause={handlePlayPause}
-          onReset={handleReset}
-          isPlaying={isPlaying}
-        />
-        <div className="flex-shrink-0 w-[350px] sm:w-[400px]">
-          <MoveAnalysisBar moveIndex={moveIndex} moves={moves} />
-        </div>
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-xl text-[#a89984]">
+            Loading game analysis...
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex items-center justify-center text-xl text-red-500">
+            {error}
+          </div>
+        ) : (
+          <>
+            <Board 
+              moveIndex={moveIndex} 
+              fenPositions={fenPositions}
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+              onPlayPause={handlePlayPause}
+              onReset={handleReset}
+              isPlaying={isPlaying}
+            />
+            <div className="flex-shrink-0 w-[350px] sm:w-[400px]">
+              <MoveAnalysisBar moveIndex={moveIndex} moves={moves} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
