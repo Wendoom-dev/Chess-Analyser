@@ -17,7 +17,8 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: 'GET /health',
-      analyze: 'POST /api/analysis/analyze'
+      analyze: 'POST /api/analysis/analyze',
+      chess_engine: 'POST /api/analysis/analyze-with-engine'
     }
   });
 });
