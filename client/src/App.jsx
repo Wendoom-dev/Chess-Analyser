@@ -31,16 +31,19 @@ export default function App() {
   const [moves, setMoves] = useState([]);
   const [moveIndex, setMoveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // New state for engine analysis
+  const [analysis, setAnalysis] = useState([]);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
 
-  // Fetch parsed PGN from backend
+  // Fetch parsed PGN from backend (FAST - for board rendering)
   useEffect(() => {
     const analyzePGN = async () => {
       setLoading(true);
       setError(null);
-
       try {
         const response = await fetch("http://localhost:5000/api/analysis/analyze", {
           method: "POST",
@@ -53,7 +56,6 @@ export default function App() {
         const result = await response.json();
         setMoves(result.data.moves);
         setFenPositions(result.data.fenPositions);
-
       } catch (err) {
         console.error(err);
         setError(err.message);
@@ -63,6 +65,35 @@ export default function App() {
     };
 
     analyzePGN();
+  }, []);
+
+  // Fetch engine analysis from backend (SLOW - for analysis bar)
+  useEffect(() => {
+    const analyzeWithEngine = async () => {
+      setAnalysisLoading(true);
+      setAnalysisError(null);
+      try {
+        console.log("Starting Stockfish analysis...");
+        const response = await fetch("http://localhost:5000/api/analysis/analyze-with-engine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pgn: PGN, depth: 15 }),
+        });
+
+        if (!response.ok) throw new Error("Failed to analyze with engine");
+
+        const result = await response.json();
+        console.log("Stockfish analysis complete:", result);
+        setAnalysis(result.data.analysis);
+      } catch (err) {
+        console.error("Engine analysis error:", err);
+        setAnalysisError(err.message);
+      } finally {
+        setAnalysisLoading(false);
+      }
+    };
+
+    analyzeWithEngine();
   }, []);
 
   // Auto-play moves
@@ -89,7 +120,6 @@ export default function App() {
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#1e1b18] text-[#e6c07b] font-['Space_Grotesk'] flex flex-col">
       <Navbar />
-
       <div className="flex flex-1 h-[calc(100vh-6rem)] overflow-hidden">
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-xl text-[#a89984]">
@@ -111,7 +141,13 @@ export default function App() {
               isPlaying={isPlaying}
             />
             <div className="flex-shrink-0 w-[350px] sm:w-[400px]">
-              <MoveAnalysisBar moveIndex={moveIndex} moves={moves} />
+              <MoveAnalysisBar 
+                moveIndex={moveIndex} 
+                moves={moves}
+                analysis={analysis}
+                analysisLoading={analysisLoading}
+                analysisError={analysisError}
+              />
             </div>
           </>
         )}
