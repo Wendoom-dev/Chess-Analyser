@@ -17,7 +17,8 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "pgn-parser": "^2.2.1"
+    "pgn-parser": "^2.2.1",
+    "stockfish": "^17.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
