@@ -1,5 +1,6 @@
 const chessService = require('../services/chess_service');
 const engineService = require('../services/engine_service');
+const fetch = require('node-fetch');
 
 /**
  * Analyze a chess game from PGN
@@ -52,7 +53,7 @@ const analyzeGame = async (req, res) => {
 };
 
 /**
- * Analyze a chess game with Stockfish engine
+ * Analyze a chess game with Stockfish engine and AI commentary
  * @route POST /api/analysis/analyze-with-engine
  * @param {Object} req.body.pgn - The PGN string to analyze
  * @param {Number} req.body.depth - Engine analysis depth (optional, default: 15)
@@ -82,7 +83,7 @@ const analyzeGameWithEngine = async (req, res) => {
     // First, process the PGN to get moves and FEN positions
     const gameData = await chessService.processPGN(pgn);
 
-    console.log(`Analyzing ${gameData.totalPositions} positions with Stockfish at depth ${depth}...`);
+    console.log(`\n📊 Analyzing ${gameData.totalPositions} positions with Stockfish at depth ${depth}...`);
 
     // Analyze each position with Stockfish
     const positionAnalyses = [];
@@ -92,7 +93,7 @@ const analyzeGameWithEngine = async (req, res) => {
       const moveNumber = Math.floor(i / 2) + 1;
       const isWhiteMove = i % 2 === 0;
       
-      console.log(`Analyzing position ${i + 1}/${gameData.fenPositions.length}...`);
+      console.log(`  Analyzing position ${i + 1}/${gameData.fenPositions.length}...`);
       
       try {
         const analysis = await engineService.analyzePosition(fen, depth);
@@ -108,7 +109,7 @@ const analyzeGameWithEngine = async (req, res) => {
           evaluationText: formatEvaluation(analysis.evaluation)
         });
       } catch (error) {
-        console.error(`Error analyzing position ${i}:`, error);
+        console.error(`  ✗ Error analyzing position ${i}:`, error);
         positionAnalyses.push({
           moveNumber,
           plyNumber: i,
@@ -120,8 +121,38 @@ const analyzeGameWithEngine = async (req, res) => {
       }
     }
 
+    console.log(`✅ Stockfish analysis complete!\n`);
+
     // Calculate accuracy and blunders
     const stats = calculateGameStats(positionAnalyses);
+
+    // Generate AI commentary
+    console.log('🤖 Generating AI commentary...');
+    let commentaries = [];
+    let commentaryError = null;
+    
+    try {
+      const commentaryResponse = await fetch('http://localhost:5001/generate-commentary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysis: positionAnalyses }),
+        timeout: 120000 // 2 minute timeout
+      });
+
+      if (commentaryResponse.ok) {
+        const commentaryData = await commentaryResponse.json();
+        commentaries = commentaryData.commentaries || [];
+        console.log(`✅ Generated ${commentaries.length} commentaries\n`);
+      } else {
+        const errorText = await commentaryResponse.text();
+        console.warn(`⚠️  Commentary API returned error: ${commentaryResponse.status}`);
+        commentaryError = `Commentary service error: ${commentaryResponse.status}`;
+      }
+    } catch (error) {
+      console.warn(`⚠️  Could not connect to commentary service: ${error.message}`);
+      console.warn('   Continuing without AI commentary...\n');
+      commentaryError = `Commentary service unavailable: ${error.message}`;
+    }
 
     // Send complete analysis
     return res.status(200).json({
@@ -131,12 +162,15 @@ const analyzeGameWithEngine = async (req, res) => {
         moves: gameData.moves,
         totalMoves: gameData.totalMoves,
         analysis: positionAnalyses,
-        statistics: stats
+        commentaries: commentaries,
+        statistics: stats,
+        commentaryStatus: commentaryError ? 'failed' : 'success',
+        commentaryError: commentaryError
       }
     });
 
   } catch (error) {
-    console.error('Error analyzing game with engine:', error);
+    console.error('❌ Error analyzing game with engine:', error);
 
     return res.status(500).json({
       success: false,
