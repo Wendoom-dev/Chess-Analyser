@@ -1,4 +1,4 @@
-export default function MoveAnalysisBar({ moveIndex, moves, analysis, analysisLoading, analysisError }) {
+export default function MoveAnalysisBar({ moveIndex, moves, analysis, commentaries, analysisLoading, analysisError }) {
   console.log("Bar moveIndex:", moveIndex);
   
   const currentMove = moves[moveIndex - 1];
@@ -7,6 +7,9 @@ export default function MoveAnalysisBar({ moveIndex, moves, analysis, analysisLo
   
   // Get the analysis for the current position
   const currentAnalysis = analysis[moveIndex];
+  
+  // Get the commentary for the current position
+  const currentCommentary = commentaries?.find(c => c.plyNumber === moveIndex);
 
   return (
     <div className="h-full border-l border-[#3a342e] p-4 flex flex-col gap-6">
@@ -35,11 +38,36 @@ export default function MoveAnalysisBar({ moveIndex, moves, analysis, analysisLo
                 </p>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <p><strong>Move {moveIndex}</strong> of {moves.length}</p>
                 
+                {/* AI COMMENTARY SECTION - NEW! */}
+                {currentCommentary && !currentCommentary.error && (
+                  <div className="p-3 bg-[#1e1b18] rounded border border-[#e6c07b]/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-xs text-[#e6c07b] font-semibold">🤖 AI Commentary</p>
+                      {currentCommentary.provider && (
+                        <span className="text-[10px] text-[#a89984] bg-[#2a2622] px-2 py-0.5 rounded">
+                          {currentCommentary.provider}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-[#d6bfa6] leading-relaxed italic">
+                      {currentCommentary.commentary.replace(/^["']|["']$/g, '')}
+                    </p>
+                  </div>
+                )}
+                
+                {currentCommentary?.error && (
+                  <div className="p-3 bg-[#1e1b18] rounded border border-red-400/30">
+                    <p className="text-xs text-red-400 mb-1">⚠️ Commentary unavailable</p>
+                    <p className="text-xs text-[#a89984]">Rate limit reached</p>
+                  </div>
+                )}
+                
+                {/* ENGINE ANALYSIS SECTION */}
                 <div className="p-3 bg-[#1e1b18] rounded border border-[#3a342e]">
-                  <p className="text-xs text-[#a89984] mb-2">Analysis</p>
+                  <p className="text-xs text-[#a89984] mb-2">Engine Analysis</p>
                   
                   {analysisLoading ? (
                     <div className="space-y-2">
@@ -88,7 +116,7 @@ export default function MoveAnalysisBar({ moveIndex, moves, analysis, analysisLo
                         <summary className="cursor-pointer text-[#a89984] hover:text-[#e6c07b]">
                           View raw data
                         </summary>
-                        <pre className="mt-2 p-2 bg-[#1e1b18] rounded overflow-x-auto">
+                        <pre className="mt-2 p-2 bg-[#1e1b18] rounded overflow-x-auto text-[10px]">
                           {JSON.stringify(currentAnalysis, null, 2)}
                         </pre>
                       </details>

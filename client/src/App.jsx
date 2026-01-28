@@ -36,6 +36,7 @@ export default function App() {
   
   // New state for engine analysis
   const [analysis, setAnalysis] = useState([]);
+  const [commentaries, setCommentaries] = useState([]); // NEW: Store commentaries
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
 
@@ -85,6 +86,14 @@ export default function App() {
         const result = await response.json();
         console.log("Stockfish analysis complete:", result);
         setAnalysis(result.data.analysis);
+        setCommentaries(result.data.commentaries || []); // NEW: Store commentaries
+        
+        // Log commentary info
+        console.log(`✅ Loaded ${result.data.commentaries?.length || 0} commentaries`);
+        console.log(`Commentary Status: ${result.data.commentaryStatus}`);
+        if (result.data.commentaryError) {
+          console.warn(`⚠️ Commentary Error: ${result.data.commentaryError}`);
+        }
       } catch (err) {
         console.error("Engine analysis error:", err);
         setAnalysisError(err.message);
@@ -145,6 +154,7 @@ export default function App() {
                 moveIndex={moveIndex} 
                 moves={moves}
                 analysis={analysis}
+                commentaries={commentaries}
                 analysisLoading={analysisLoading}
                 analysisError={analysisError}
               />
