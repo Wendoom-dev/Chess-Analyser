@@ -46,7 +46,7 @@ export default function App() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch("http://localhost:5000/api/analysis/analyze", {
+        const response = await fetch("http://localhost:5001/api/analysis/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pgn: PGN }),
@@ -75,7 +75,7 @@ export default function App() {
       setAnalysisError(null);
       try {
         console.log("Starting Stockfish analysis...");
-        const response = await fetch("http://localhost:5000/api/analysis/analyze-with-engine", {
+        const response = await fetch("http://localhost:5001/api/analysis/analyze-with-engine", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pgn: PGN, depth: 15 }),

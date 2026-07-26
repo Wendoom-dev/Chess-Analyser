@@ -2,134 +2,124 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 /**
- * Analyze a chess position using Stockfish engine
- * @param {string} fen - The FEN position to analyze
- * @param {number} depth - Analysis depth (default: 15)
- * @returns {Promise<Object>} - Object containing bestMove and evaluation
+ * Analyze a chess position using Stockfish.
+ * @param {string} fen - FEN string of the position.
+ * @param {number} depth - Search depth.
+ * @returns {Promise<{bestMove: string, evaluation: number}>}
  */
 function analyzePosition(fen, depth = 15) {
   return new Promise((resolve, reject) => {
-    // Determine the correct engine path based on OS
     const enginePath = getEnginePath();
-
     const engine = spawn(enginePath);
 
     let bestMove = null;
-    let evaluation = null;
-    let isReady = false;
-    let timeout;
+    let evaluation = 0;
 
-    // Set a timeout to prevent hanging
-    timeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
       engine.kill();
-      reject(new Error('Engine analysis timeout'));
-    }, 30000); // 30 second timeout
+      reject(new Error("Engine analysis timed out."));
+    }, 30000);
 
-    engine.stdout.on('data', (data) => {
-      const lines = data.toString().split('\n');
+    engine.stdout.on("data", (data) => {
+      const lines = data.toString().split("\n");
 
       for (const line of lines) {
-        // Check if engine is ready
-        if (line.includes('uciok')) {
-          isReady = true;
-        }
-
-        // Extract centipawn evaluation
-        if (line.includes('score cp')) {
+        // Centipawn evaluation
+        if (line.includes("score cp")) {
           const match = line.match(/score cp (-?\d+)/);
           if (match) {
             evaluation = parseInt(match[1], 10) / 100;
           }
         }
 
-        // Extract mate score
-        if (line.includes('score mate')) {
-          const mateMatch = line.match(/score mate (-?\d+)/);
-          if (mateMatch) {
-            const mateIn = parseInt(mateMatch[1], 10);
-            // Represent mate as very high/low score
-            evaluation = mateIn > 0 ? 100 : -100;
+        // Mate evaluation
+        if (line.includes("score mate")) {
+          const match = line.match(/score mate (-?\d+)/);
+          if (match) {
+            const mate = parseInt(match[1], 10);
+            evaluation = mate > 0 ? 100 : -100;
           }
         }
 
-        // Get best move and finish
-        if (line.startsWith('bestmove')) {
+        // Best move received
+        if (line.startsWith("bestmove")) {
           clearTimeout(timeout);
-          bestMove = line.split(' ')[1];
-          
-          engine.stdin.write('quit\n');
-          
-          // Give engine a moment to quit gracefully
-          setTimeout(() => {
-            if (!engine.killed) {
-              engine.kill();
-            }
-          }, 100);
-          
-          resolve({ 
-            bestMove, 
-            evaluation: evaluation !== null ? evaluation : 0 
+
+          bestMove = line.split(" ")[1];
+
+          engine.stdin.write("quit\n");
+
+          resolve({
+            bestMove,
+            evaluation,
           });
         }
       }
     });
 
-    engine.stderr.on('data', (err) => {
-      console.error('Engine stderr:', err.toString());
+    engine.stderr.on("data", (data) => {
+      console.error("Stockfish:", data.toString());
     });
 
-    engine.on('error', (error) => {
+    engine.on("error", (err) => {
       clearTimeout(timeout);
-      reject(new Error(`Failed to start engine: ${error.message}`));
-    });
 
-    engine.on('close', (code) => {
-      if (code !== 0 && code !== null && bestMove === null) {
-        clearTimeout(timeout);
-        reject(new Error(`Engine process exited with code ${code}`));
+      if (err.code === "ENOENT") {
+        reject(
+          new Error(
+            `Stockfish executable not found.\nExpected: ${enginePath}\nMake sure Stockfish is installed and available.`
+          )
+        );
+      } else {
+        reject(err);
       }
     });
 
-    // Send UCI commands
+    engine.on("close", (code) => {
+      if (code !== 0 && bestMove === null) {
+        clearTimeout(timeout);
+        reject(new Error(`Stockfish exited with code ${code}`));
+      }
+    });
+
     try {
-      engine.stdin.write('uci\n');
-      engine.stdin.write('isready\n');
+      engine.stdin.write("uci\n");
+      engine.stdin.write("isready\n");
       engine.stdin.write(`position fen ${fen}\n`);
       engine.stdin.write(`go depth ${depth}\n`);
-    } catch (error) {
+    } catch (err) {
       clearTimeout(timeout);
       engine.kill();
-      reject(new Error(`Failed to communicate with engine: ${error.message}`));
+      reject(err);
     }
   });
 }
 
 /**
- * Get the correct Stockfish engine path based on the operating system
- * @returns {string} - Path to the Stockfish executable
+ * Returns the Stockfish executable path for the current platform.
  */
 function getEnginePath() {
-  const platform = process.platform;
-  
-  if (platform === 'win32') {
-    // Windows - assumes extracted .exe file in same directory as engine_service.js
-    return path.join(
-      __dirname,
-      'stockfish-windows-x86-64-avx2.exe'
-    );
-  } else if (platform === 'darwin') {
-    // macOS
-    return path.join(
-      __dirname,
-      'stockfish-mac'
-    );
-  } else {
-    // Linux
-    return path.join(
-      __dirname,
-      'stockfish-linux'
-    );
+  switch (process.platform) {
+    case "win32":
+      // Bundled Windows executable
+      return path.join(
+        __dirname,
+        "stockfish-windows-x86-64-avx2.exe"
+      );
+
+    case "darwin":
+      // Homebrew installation (Apple Silicon & Intel)
+      return "stockfish";
+
+    case "linux":
+      // System installation
+      return "stockfish";
+
+    default:
+      throw new Error(`Unsupported platform: ${process.platform}`);
   }
 }
 
-module.exports = { analyzePosition };
+module.exports = {
+  analyzePosition,
+};

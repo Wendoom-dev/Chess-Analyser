@@ -124,7 +124,7 @@ if __name__ == '__main__':
         print("⚠️  WARNING: No API keys found!")
         print("   Add at least one key to your .env file")
     
-    print("🚀 Starting server on http://localhost:5001")
+    print("🚀 Starting server on http://localhost:5002")
     print("=" * 60 + "\n")
     
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5002, debug=True)

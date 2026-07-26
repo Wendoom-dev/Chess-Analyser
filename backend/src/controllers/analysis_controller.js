@@ -132,7 +132,7 @@ const analyzeGameWithEngine = async (req, res) => {
     let commentaryError = null;
     
     try {
-      const commentaryResponse = await fetch('http://localhost:5001/generate-commentary', {
+      const commentaryResponse = await fetch('http://localhost:5002/generate-commentary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysis: positionAnalyses }),
