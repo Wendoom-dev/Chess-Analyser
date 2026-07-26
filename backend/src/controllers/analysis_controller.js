@@ -59,6 +59,9 @@ const analyzeGame = async (req, res) => {
  * @param {Number} req.body.depth - Engine analysis depth (optional, default: 15)
  */
 const analyzeGameWithEngine = async (req, res) => {
+  console.log("====================================");
+  console.log("NEW REQUEST:", new Date().toISOString());
+  console.log("====================================");
   try {
     const { pgn, depth = 15 } = req.body;
 
@@ -136,7 +139,7 @@ const analyzeGameWithEngine = async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysis: positionAnalyses }),
-        timeout: 120000 // 2 minute timeout
+        timeout: 300000 // 5 minute timeout
       });
 
       if (commentaryResponse.ok) {

@@ -1,130 +1,217 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from freeflow_llm import FreeFlowClient, NoProvidersAvailableError
-from dotenv import load_dotenv
-import os
-
-# Load environment variables from .env
-load_dotenv()
+from langchain_ollama import ChatOllama
+import json
 
 app = Flask(__name__)
-CORS(app)  # Allow Node.js to call this service
+CORS(app)
 
-@app.route('/health', methods=['GET'])
+llm = ChatOllama(
+    model="llama3.2:3b",
+    temperature=0.2,
+    num_predict=2048,      # enough tokens for ~10 commentaries
+    num_ctx=8192,           # larger context window
+    # repeat_penalty=1.05,
+    # top_p=0.9,
+    # top_k=40,
+)
+
+BATCH_SIZE = 10
+
+
+@app.route("/health", methods=["GET"])
 def health_check():
-    """Simple health check"""
-    return jsonify({'status': 'ok', 'service': 'commentary-service'})
+    return jsonify({
+        "status": "ok",
+        "service": "commentary-service"
+    })
 
-@app.route('/test-providers', methods=['GET'])
-def test_providers():
-    """Test which LLM providers are available"""
-    try:
-        with FreeFlowClient() as client:
-            providers = client.list_providers()
-            return jsonify({
-                'success': True,
-                'available_providers': providers,
-                'count': len(providers)
-            })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/generate-commentary', methods=['POST'])
+def build_prompt(batch):
+    prompt = """
+You are an expert chess commentator.
+
+Generate commentary for EVERY move below.
+
+Return ONLY valid JSON.
+
+Format:
+
+[
+ {
+   "plyNumber": 1,
+   "moveNumber": 1,
+   "commentary": "..."
+ }
+]
+
+Rules:
+
+- Return EXACTLY one JSON object for every position.
+- Do not skip any move.
+- Do not use markdown.
+- Do not explain anything.
+- Commentary should be 2 concise sentences.
+- Mention whether the move follows or differs from Stockfish.
+- Mention who is better if evaluation is large.
+
+Positions:
+
+"""
+
+    for p in batch:
+
+        prompt += f"""
+--------------------------------
+Ply Number: {p["plyNumber"]}
+Move Number: {p["moveNumber"]}
+Side: {"White" if p["isWhiteMove"] else "Black"}
+
+Played Move:
+{p["playedMove"]}
+
+Engine Best Move:
+{p["engineBestMove"]}
+
+Evaluation:
+{p["evaluationText"]}
+
+"""
+
+    return prompt
+
+
+def parse_json(text):
+
+    text = text.replace("```json", "")
+    text = text.replace("```", "")
+    text = text.strip()
+
+    start = text.find("[")
+    end = text.rfind("]")
+
+    if start != -1 and end != -1:
+        text = text[start:end + 1]
+
+    return json.loads(text)
+
+
+@app.route("/generate-commentary", methods=["POST"])
 def generate_commentary():
-    """Generate chess commentary from Stockfish analysis"""
+
     try:
+
         data = request.json
-        analysis_array = data.get('analysis', [])
-        
-        if not analysis_array:
-            return jsonify({'error': 'No analysis data provided'}), 400
-        
-        print(f"\n🎯 Generating commentary for {len(analysis_array)} positions...")
-        
-        commentaries = []
-        
-        with FreeFlowClient() as client:
-            for i, position in enumerate(analysis_array):
-                try:
-                    # Skip starting position
-                    if position.get('plyNumber') == 0:
-                        continue
-                    
-                    # Build prompt
-                    prompt = f"""You are a chess commentator analyzing a game. Provide natural, engaging commentary.
+        analysis = data.get("analysis", [])
 
-Position Details:
-- Move Number: {position.get('moveNumber')}
-- Turn: {"White" if position.get('isWhiteMove') else "Black"}
-- Move Played: {position.get('playedMove', 'N/A')}
-- Engine Best Move: {position.get('engineBestMove', 'N/A')}
-- Evaluation: {position.get('evaluationText', 'N/A')}
+        if not analysis:
+            return jsonify({
+                "success": False,
+                "error": "No analysis provided"
+            }), 400
 
-Write 2-3 sentences of natural chess commentary explaining this position and move quality."""
+        positions = [
+            p for p in analysis
+            if p["plyNumber"] != 0
+        ]
 
-                    # Generate commentary
-                    response = client.chat(
-                        messages=[{"role": "user", "content": prompt}],
-                        temperature=0.7,
-                        max_tokens=150
+        print(f"\n🎯 Generating commentary for {len(positions)} moves")
+
+        all_commentaries = []
+
+        total_batches = (len(positions) + BATCH_SIZE - 1) // BATCH_SIZE
+
+        for batch_number in range(total_batches):
+
+            start = batch_number * BATCH_SIZE
+            end = start + BATCH_SIZE
+
+            batch = positions[start:end]
+
+            print(
+                f"\nBatch {batch_number+1}/{total_batches} "
+                f"({len(batch)} moves)"
+            )
+
+            prompt = build_prompt(batch)
+
+            try:
+
+                response = llm.invoke(prompt)
+
+                batch_commentaries = parse_json(response.content)
+
+                if len(batch_commentaries) != len(batch):
+                    print(
+                        f"⚠ Expected {len(batch)} comments "
+                        f"got {len(batch_commentaries)}"
                     )
-                    
-                    commentaries.append({
-                        'plyNumber': position.get('plyNumber'),
-                        'moveNumber': position.get('moveNumber'),
-                        'commentary': response.content.strip(),
-                        'provider': response.provider
-                    })
-                    
-                    print(f"  ✓ Position {i+1}/{len(analysis_array)} - {response.provider}")
-                    
-                except Exception as e:
-                    print(f"  ✗ Error on position {i+1}: {str(e)}")
-                    commentaries.append({
-                        'plyNumber': position.get('plyNumber'),
-                        'moveNumber': position.get('moveNumber'),
-                        'commentary': 'Commentary generation failed for this position.',
-                        'error': str(e)
-                    })
-        
-        print(f"✅ Successfully generated {len(commentaries)} commentaries\n")
-        
-        return jsonify({
-            'success': True,
-            'commentaries': commentaries,
-            'total': len(commentaries)
-        })
-        
-    except NoProvidersAvailableError as e:
-        print(f"❌ All providers exhausted: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'All LLM providers are rate-limited. Try again later.'
-        }), 429
-        
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
 
-if __name__ == '__main__':
-    # Check which API keys are loaded
-    groq = os.getenv('GROQ_API_KEY')
-    gemini = os.getenv('GEMINI_API_KEY')
-    github = os.getenv('GITHUB_TOKEN')
-    
+                all_commentaries.extend(batch_commentaries)
+
+                print(f"✓ Batch {batch_number+1} complete")
+
+            except Exception as e:
+
+                print(f"Retrying batch {batch_number+1}")
+
+                try:
+
+                    response = llm.invoke(prompt)
+
+                    batch_commentaries = parse_json(response.content)
+
+                    all_commentaries.extend(batch_commentaries)
+
+                    print(f"✓ Retry successful")
+
+                except Exception as retry_error:
+
+                    print(
+                        f"❌ Batch {batch_number+1} failed: "
+                        f"{retry_error}"
+                    )
+
+                    # Return placeholder commentary instead of failing
+                    for pos in batch:
+
+                        all_commentaries.append({
+                            "plyNumber": pos["plyNumber"],
+                            "moveNumber": pos["moveNumber"],
+                            "commentary": "Commentary generation failed for this move."
+                        })
+
+        print(f"\n✅ Generated {len(all_commentaries)} commentaries\n")
+
+        return jsonify({
+            "success": True,
+            "commentaries": all_commentaries,
+            "total": len(all_commentaries)
+        })
+
+    except Exception as e:
+
+        print(e)
+
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+if __name__ == "__main__":
+
     print("=" * 60)
-    print("🎮 Chess Commentary Service")
+    print("♟ Chess Commentary Service")
     print("=" * 60)
-    print(f"Groq API:   {'✓ Loaded' if groq else '✗ Not found'}")
-    print(f"Gemini API: {'✓ Loaded' if gemini else '✗ Not found'}")
-    print(f"GitHub API: {'✓ Loaded' if github else '✗ Not found'}")
+    print("LLM: llama3.2:3b")
+    print(f"Batch Size: {BATCH_SIZE}")
+    print("Mode: Batched Generation")
+    print("Running at: http://localhost:5002")
     print("=" * 60)
-    
-    if not any([groq, gemini, github]):
-        print("⚠️  WARNING: No API keys found!")
-        print("   Add at least one key to your .env file")
-    
-    print("🚀 Starting server on http://localhost:5002")
-    print("=" * 60 + "\n")
-    
-    app.run(host='0.0.0.0', port=5002, debug=True)
+
+    app.run(
+        host="0.0.0.0",
+        port=5002,
+        debug=False
+    )
