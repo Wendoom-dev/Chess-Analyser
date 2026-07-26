@@ -1,0 +1,23 @@
+The Rule of the Square (Pawn Endgames)
+
+The Rule of the Square determines whether a king can catch a passed pawn by imagining a square extending from the pawn to its promotion square. If the defending king can enter the square on its move, it can normally stop the pawn; otherwise the pawn promotes assuming no additional complications.
+
+Key Squares and Opposition (King + Pawn vs. King)
+
+Key squares are critical central or advanced squares which, once occupied by the attacking king, guarantee pawn promotion under correct play. Opposition refers to kings facing each other with one square between them, allowing the player not required to move to force the opposing king to yield critical ground.
+
+Lucena Position & Philidor Position (Rook Endgames)
+
+The Lucena Position is the fundamental winning rook endgame where the stronger side builds a bridge with the rook to shield the king from checks and promote the pawn. The Philidor Position is the essential defensive technique in which the defending rook prevents king advancement before retreating to deliver checks from behind once the pawn advances.
+
+Passed Pawns (Outside Passed Pawns vs. Connected Passed Pawns)
+
+An outside passed pawn diverts the defending king away from the main action, often creating winning opportunities elsewhere on the board. Connected passed pawns support one another and become increasingly powerful as they advance together, frequently overwhelming defensive resources.
+
+Wrong Color Bishop / Opposite Color Bishops
+
+A wrong-colour bishop occurs when a rook pawn promotes on a square opposite the bishop's colour, often making promotion impossible if the defending king occupies the corner. Opposite-coloured bishop endgames have high drawing tendencies because each bishop controls different complexes of squares, making it difficult to convert even significant material advantages.
+
+Zugzwang in Endgames
+
+Zugzwang is a position where every legal move worsens the player's situation, making the obligation to move a decisive disadvantage. It most commonly appears in king and pawn endings, where precise king manoeuvres force the opponent to concede key squares or allow pawn breakthroughs.

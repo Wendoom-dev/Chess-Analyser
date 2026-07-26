@@ -1,0 +1,26 @@
+Absolute and Relative Pins
+An absolute pin occurs when a piece cannot legally move because it would expose the king to check, while a relative pin protects a more valuable piece behind it. Pins become strongest when the pinned piece is a key defender or blocks an important file or diagonal, often enabling material gain or decisive attacks.
+
+Knight Forks and Royal Forks
+
+A knight fork attacks two or more enemy pieces simultaneously using the knight's unique movement pattern, often exploiting weak central squares and outposts. A royal fork specifically attacks both the king and queen, usually forcing the king to move before the queen can be captured.
+
+Skewers & Discovered Attacks / Discovered Checks
+
+A skewer attacks a valuable piece positioned in front of a less valuable piece, forcing the stronger piece away so the weaker one is lost. A discovered attack occurs when one piece moves to reveal an attack from another piece behind it, while a discovered check simultaneously uncovers an attack and forces the opponent's king to respond immediately.
+
+Double Checks & Interference Tactics
+
+A double check occurs when two pieces simultaneously attack the enemy king, making king movement the only legal response because neither checking piece can be captured or blocked individually. Interference tactics deliberately place a piece between two coordinated enemy pieces, disrupting defensive communication or blocking critical lines.
+
+Back Rank Mating Patterns & Smothered Mates
+
+Back rank mates exploit trapped kings blocked by their own pawns, usually after heavy pieces invade the final rank when escape squares are unavailable. Smothered mates occur when a knight delivers checkmate to a king surrounded by its own pieces, frequently after a queen sacrifice removes defensive options.
+
+Deflection, Decoy, and Overloading Tactics
+
+Deflection forces an enemy piece away from an important defensive responsibility, while a decoy lures it onto an unfavourable square where tactical motifs become possible. Overloading exploits a piece assigned multiple defensive duties, creating a situation where fulfilling one obligation necessarily abandons another.
+
+The Greek Gift Sacrifice (Bxh7+/Bxh2+)
+
+The Greek Gift begins with a bishop sacrifice on h7 (or h2) to expose the enemy king and drag it into the open. The attack typically continues with Ng5+, Qh5 or Qf3, and rapid piece mobilisation, succeeding only when sufficient attacking resources and restricted defensive coordination exist.

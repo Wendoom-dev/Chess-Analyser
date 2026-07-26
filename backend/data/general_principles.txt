@@ -1,0 +1,11 @@
+Opening Principles
+
+Control the centre with pawns and pieces, develop minor pieces efficiently, avoid moving the same piece repeatedly without necessity, and castle early to ensure king safety and rook connectivity.
+
+Middlegame Principles
+
+Occupy open files with rooks, establish knights on protected outposts, coordinate heavy pieces, and preserve the bishop pair when it offers long-term activity across open diagonals.
+
+Pawn Structure Concepts
+
+Doubled pawns often reduce pawn mobility but may open files; an isolated d-pawn provides central space but can become a long-term target; backward pawns are difficult to defend and frequently occupy half-open files; pawn chains should be attacked at their base while using their direction to determine the correct wing for expansion.
